@@ -1,0 +1,66 @@
+name: Live DataHub integration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-datahub-integration
+  cancel-in-progress: false
+
+jobs:
+  live-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DATAHUB_GMS_URL: http://localhost:8080
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Contract Bridge and official DataHub clients
+        run: |
+          python -m pip install --upgrade pip wheel
+          python -m pip install -e '.[dev,mcp]' 'acryl-datahub>=1.1,<2'
+
+      - name: Start a disposable DataHub quickstart
+        run: |
+          free -h
+          df -h /
+          datahub docker quickstart
+          datahub docker check
+          datahub docker ingest-sample-data
+
+      - name: Run read, confirmed write, and exact re-read
+        run: |
+          mkdir -p artifacts/live-plan artifacts/live-write
+          plan_hash="$(datahub-contract-bridge plan-mcp \
+            --manifest tests/fixtures/sample-kafka-manifest.json \
+            --output artifacts/live-plan | tail -n 1)"
+          test "${#plan_hash}" -eq 64
+          printf '%s' "$plan_hash" | grep -Eq '^[0-9a-f]{64}$'
+          datahub-contract-bridge apply-mcp \
+            --manifest tests/fixtures/sample-kafka-manifest.json \
+            --output artifacts/live-write \
+            --confirm-plan-sha256 "$plan_hash"
+          jq -e --arg plan_hash "$plan_hash" \
+            '.verified == true and .plan_sha256 == $plan_hash' \
+            artifacts/live-write/writeback-receipt.json
+          diff -u artifacts/live-plan/plan.json artifacts/live-write/plan.json
+
+      - name: Preserve non-secret integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: datahub-live-integration
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+

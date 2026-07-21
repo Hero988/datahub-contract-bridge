@@ -1,0 +1,58 @@
+{
+  "metadata": {
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v12.json"
+  },
+  "nodes": {
+    "model.bridge.sample_kafka_dataset": {
+      "unique_id": "model.bridge.sample_kafka_dataset",
+      "resource_type": "model",
+      "name": "sample_kafka_dataset",
+      "relation_name": "SampleKafkaDataset",
+      "config": {
+        "enabled": true,
+        "contract": {
+          "enforced": true
+        }
+      },
+      "columns": {
+        "id": {
+          "name": "id",
+          "data_type": "string",
+          "constraints": [
+            {
+              "type": "not_null"
+            }
+          ]
+        },
+        "event_timestamp": {
+          "name": "event_timestamp",
+          "data_type": "timestamp"
+        },
+        "event_type": {
+          "name": "event_type",
+          "data_type": "string"
+        }
+      }
+    },
+    "test.bridge.unique_sample_kafka_dataset_id": {
+      "unique_id": "test.bridge.unique_sample_kafka_dataset_id",
+      "resource_type": "test",
+      "name": "unique_sample_kafka_dataset_id",
+      "column_name": "id",
+      "tags": [
+        "contract"
+      ],
+      "test_metadata": {
+        "name": "unique",
+        "kwargs": {
+          "column_name": "id"
+        }
+      },
+      "depends_on": {
+        "nodes": [
+          "model.bridge.sample_kafka_dataset"
+        ]
+      }
+    }
+  }
+}
