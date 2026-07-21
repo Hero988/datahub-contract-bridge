@@ -9,10 +9,9 @@ DataHub dataset through the official MCP server, reads its schema, one-hop downs
 lineage and owners, then emits JSON plus Markdown with a stable SHA-256 confirmation
 token. The same planner can run against deterministic catalog fixtures.
 
-The MCP adapter is covered by deterministic transport-contract tests but has not yet
-run against a live DataHub instance. Offline fixtures are not presented as a live
-integration. The next milestone adds explicitly confirmed `save_document` write-back
-and re-read.
+The MCP adapter and guarded write-back are covered by deterministic transport-contract
+tests but have not yet run against a live DataHub instance. Offline fixtures are not
+presented as a live integration.
 
 ## Why this exists
 
@@ -58,6 +57,27 @@ exact match, multiple exact matches, schemas over 1,000 fields, and downstream w
 over 100 assets instead of silently planning with partial context. Mutation tools are
 forced off for this command. Tokens and endpoints are never written to plan artifacts.
 
+## Confirmed write-back
+
+First review the `plan-mcp` artifacts and copy its printed SHA-256. Then apply that
+exact plan:
+
+```bash
+datahub-contract-bridge apply-mcp \
+  --manifest tests/fixtures/manifest.json \
+  --output artifacts/live-write \
+  --confirm-plan-sha256 '<exact plan-mcp SHA-256>'
+```
+
+`apply-mcp` re-reads the live schema, lineage and owners and recomputes the plan inside
+the mutation-enabled MCP session. A stale or mistyped hash fails before any write. A
+matching hash is saved through the official `save_document` tool at the deterministic
+URN `urn:li:document:contract-bridge-<plan SHA-256>`, so retries update the same
+document. The command then calls `get_entities` and requires the exact URN, title and
+complete content to match before writing `writeback-receipt.json` with
+`"verified": true`. Rendered plans over 7,000 characters fail closed so the official
+re-read response can be verified without truncation.
+
 ## Test
 
 ```bash
@@ -71,7 +91,8 @@ ruff check .
 - Endpoint and token will be accepted only through environment variables and are never
   serialized into plans.
 - DataHub access is read-only by default.
-- A write requires the exact displayed plan SHA-256 and is followed by a re-read.
+- A write re-reads the live context, requires the exact displayed plan SHA-256, uses a
+  deterministic document URN, and is followed by an exact bounded re-read.
 - The tool never claims a contract or write succeeded without the corresponding API
   response and verification.
 
