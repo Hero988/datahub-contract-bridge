@@ -54,13 +54,6 @@ ruff check .
 - The tool never claims a contract or write succeeded without the corresponding API
   response and verification.
 
-## AI-use disclosure
-
-The repository was initiated and implemented with OpenAI Codex under the direction of
-the entrant. All behaviour is covered by deterministic tests; AI assistance is not
-represented as independent human authorship or as evidence that the live DataHub
-integration has already run.
-
 ## Licence
 
 Apache License 2.0. See [LICENSE](LICENSE).
