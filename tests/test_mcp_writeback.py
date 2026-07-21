@@ -51,6 +51,37 @@ def test_writer_requires_exact_fresh_hash_before_any_mutation() -> None:
     assert not caller.calls
 
 
+def test_writer_can_split_mutation_from_fresh_session_verification() -> None:
+    plan = _plan()
+    urn = f"urn:li:document:contract-bridge-{plan.plan_sha256}"
+    title = f"Contract review: {plan.contract.relation_name} [{plan.plan_sha256[:12]}]"
+    content = render_markdown(plan)
+    mutation = FakeCaller({"save_document": [{"success": True, "urn": urn}]})
+    verification = FakeCaller(
+        {
+            "grep_documents": [
+                {
+                    "results": [
+                        {
+                            "urn": urn,
+                            "title": title,
+                            "matches": [{"excerpt": content, "position": 0}],
+                            "content_length": len(content),
+                        }
+                    ]
+                }
+            ]
+        }
+    )
+
+    written = asyncio.run(McpPlanWriter(mutation).write(plan, plan.plan_sha256))
+    receipt = asyncio.run(McpPlanWriter(verification).verify(plan, *written))
+
+    assert receipt.verified is True
+    assert mutation.calls["save_document"][0]["urn"] == urn
+    assert verification.calls["grep_documents"][0]["urns"] == [urn]
+
+
 def test_writer_uses_deterministic_urn_and_verifies_exact_reread() -> None:
     plan = _plan()
     urn = f"urn:li:document:contract-bridge-{plan.plan_sha256}"

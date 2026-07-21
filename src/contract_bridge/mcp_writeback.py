@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -61,7 +62,9 @@ class McpPlanWriter:
     async def _call(self, name: str, arguments: dict[str, Any]) -> Any:
         return _decode_result(await self._call_raw(name, arguments), name)
 
-    async def write_and_verify(self, plan: ChangePlan, confirmation: str) -> WritebackReceipt:
+    async def write(
+        self, plan: ChangePlan, confirmation: str
+    ) -> tuple[str, str, str]:
         if not secrets.compare_digest(plan.plan_sha256, confirmation.strip().lower()):
             raise WritebackError(
                 "confirmation hash does not match the freshly recomputed live plan; "
@@ -88,6 +91,12 @@ class McpPlanWriter:
             raise WritebackError(f"save_document did not confirm success: {message}")
         if save_result.get("urn") != urn:
             raise WritebackError("save_document returned a different document URN")
+
+        return urn, title, content
+
+    async def verify(
+        self, plan: ChangePlan, urn: str, title: str, content: str
+    ) -> WritebackReceipt:
 
         reread = _mapping(
             await self._call(
@@ -129,6 +138,12 @@ class McpPlanWriter:
 
         return WritebackReceipt(urn, title, plan.plan_sha256, True)
 
+    async def write_and_verify(self, plan: ChangePlan, confirmation: str) -> WritebackReceipt:
+        """Write and verify with one caller; primarily useful for deterministic tests."""
+
+        urn, title, content = await self.write(plan, confirmation)
+        return await self.verify(plan, urn, title, content)
+
 
 async def apply_plan_via_stdio(
     contract: DbtContract,
@@ -168,7 +183,6 @@ async def apply_plan_via_stdio(
         required = {
             "get_entities",
             "get_lineage",
-            "grep_documents",
             "list_schema_fields",
             "save_document",
             "search",
@@ -183,8 +197,36 @@ async def apply_plan_via_stdio(
         except CatalogLookupError as exc:
             raise WritebackError(str(exc)) from exc
         plan = build_change_plan(contract, context)
-        receipt = await McpPlanWriter(session).write_and_verify(plan, confirmation)
-        return plan, receipt
+        urn, title, content = await McpPlanWriter(session).write(plan, confirmation)
+
+    # DataHub OSS filters document tools when an MCP process starts before its first
+    # document exists. Start a fresh, read-only process after save_document so the
+    # official server can expose grep_documents, and allow bounded search-index lag.
+    verify_environment = os.environ.copy()
+    verify_environment.pop("TOOLS_IS_MUTATION_ENABLED", None)
+    verify_environment.pop("SAVE_DOCUMENT_TOOL_ENABLED", None)
+    verify_environment.pop("SAVE_DOCUMENT_RESTRICT_UPDATES", None)
+    verify_parameters = StdioServerParameters(
+        command=command,
+        args=list(arguments),
+        env=verify_environment,
+    )
+    for attempt in range(1, 7):
+        async with (
+            stdio_client(verify_parameters) as (reader, writer),
+            ClientSession(reader, writer) as session,
+        ):
+            await session.initialize()
+            listed = await session.list_tools()
+            if "grep_documents" in {tool.name for tool in listed.tools}:
+                receipt = await McpPlanWriter(session).verify(plan, urn, title, content)
+                return plan, receipt
+        if attempt < 6:
+            await asyncio.sleep(10)
+
+    raise WritebackError(
+        "DataHub MCP server did not expose grep_documents after the bounded indexing wait"
+    )
 
 
 def render_receipt(receipt: WritebackReceipt) -> str:
