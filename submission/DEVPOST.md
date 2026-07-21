@@ -17,6 +17,10 @@ Primary: Agents That Do Real Work
 
 <https://github.com/Hero988/datahub-contract-bridge>
 
+## Demo video
+
+<https://youtu.be/g-hDNGLs8eY>
+
 ## Inspiration
 
 dbt knows what a model declares. DataHub knows what already exists, who owns it, and
