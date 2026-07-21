@@ -42,12 +42,12 @@ jobs:
         run: |
           mkdir -p artifacts/live-plan artifacts/live-write
           plan_hash="$(datahub-contract-bridge plan-mcp \
-            --manifest tests/fixtures/sample-kafka-manifest.json \
+            --manifest tests/fixtures/sample-hive-manifest.json \
             --output artifacts/live-plan | tail -n 1)"
           test "${#plan_hash}" -eq 64
           printf '%s' "$plan_hash" | grep -Eq '^[0-9a-f]{64}$'
           datahub-contract-bridge apply-mcp \
-            --manifest tests/fixtures/sample-kafka-manifest.json \
+            --manifest tests/fixtures/sample-hive-manifest.json \
             --output artifacts/live-write \
             --confirm-plan-sha256 "$plan_hash"
           jq -e --arg plan_hash "$plan_hash" \
@@ -63,4 +63,3 @@ jobs:
           path: artifacts/
           if-no-files-found: warn
           retention-days: 14
-

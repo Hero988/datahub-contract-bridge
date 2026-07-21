@@ -3,11 +3,11 @@
     "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v12.json"
   },
   "nodes": {
-    "model.bridge.sample_kafka_dataset": {
-      "unique_id": "model.bridge.sample_kafka_dataset",
+    "model.bridge.sample_hive_dataset": {
+      "unique_id": "model.bridge.sample_hive_dataset",
       "resource_type": "model",
-      "name": "sample_kafka_dataset",
-      "relation_name": "SampleKafkaDataset",
+      "name": "sample_hive_dataset",
+      "relation_name": "SampleHiveDataset",
       "config": {
         "enabled": true,
         "contract": {
@@ -34,10 +34,10 @@
         }
       }
     },
-    "test.bridge.unique_sample_kafka_dataset_id": {
-      "unique_id": "test.bridge.unique_sample_kafka_dataset_id",
+    "test.bridge.unique_sample_hive_dataset_id": {
+      "unique_id": "test.bridge.unique_sample_hive_dataset_id",
       "resource_type": "test",
-      "name": "unique_sample_kafka_dataset_id",
+      "name": "unique_sample_hive_dataset_id",
       "column_name": "id",
       "tags": [
         "contract"
@@ -50,7 +50,7 @@
       },
       "depends_on": {
         "nodes": [
-          "model.bridge.sample_kafka_dataset"
+          "model.bridge.sample_hive_dataset"
         ]
       }
     }
