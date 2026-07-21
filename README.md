@@ -2,6 +2,29 @@
 
 Turn enforced dbt contracts into lineage-aware, reviewable DataHub change plans.
 
+## Judge quick start
+
+- **Working project:** this repository; the fixture demo below runs without credentials.
+- **Verified live evidence:** [`examples/verified-live/`](examples/verified-live/) contains
+  the plan and receipt preserved from the successful disposable DataHub OSS run.
+- **End-to-end proof:** [GitHub Actions run
+  29842906648](https://github.com/Hero988/datahub-contract-bridge/actions/runs/29842906648)
+  read live catalog context through the official MCP server, performed the hash-guarded
+  write, and verified the exact document in a fresh read-only MCP session.
+- **Submission overview:** [`submission/DEVPOST.md`](submission/DEVPOST.md) maps the
+  project directly to the challenge and judging criteria.
+
+Run the deterministic, no-credential demo:
+
+```bash
+python -m pip install -e '.[dev]'
+datahub-contract-bridge plan \
+  --manifest tests/fixtures/manifest.json \
+  --catalog-fixture tests/fixtures/catalog.json \
+  --output artifacts/demo
+python -m pytest
+```
+
 This project is a new Apache-2.0 entry for the 2026 **Build with DataHub: The Agent
 Hackathon**. It is under active development. The current read milestone parses a dbt
 `manifest.json`, includes only tests explicitly tagged `contract`, resolves exactly one

@@ -1,0 +1,82 @@
+{
+  "catalog": {
+    "dataset_urn": "urn:li:dataset:(urn:li:dataPlatform:hive,SampleHiveDataset,PROD)",
+    "downstream": [],
+    "fields": [
+      {
+        "data_type": "varchar(100)",
+        "name": "field_foo"
+      },
+      {
+        "data_type": "boolean",
+        "name": "field_bar"
+      }
+    ],
+    "owners": [
+      "urn:li:corpuser:jdoe",
+      "urn:li:corpuser:datahub"
+    ]
+  },
+  "contract": {
+    "fields": [
+      {
+        "constraints": [],
+        "data_type": "timestamp",
+        "name": "event_timestamp"
+      },
+      {
+        "constraints": [],
+        "data_type": "string",
+        "name": "event_type"
+      },
+      {
+        "constraints": [
+          "not_null"
+        ],
+        "data_type": "string",
+        "name": "id"
+      }
+    ],
+    "relation_name": "SampleHiveDataset",
+    "tests": [
+      {
+        "column_name": "id",
+        "name": "unique"
+      }
+    ],
+    "unique_id": "model.bridge.sample_hive_dataset"
+  },
+  "plan_sha256": "9c100558ffa9a172ffcdd63c6ebb2172b94a3a56c5d84afb8f0e5ce03df9d161",
+  "risks": [
+    {
+      "code": "FIELD_REMOVAL",
+      "detail": "Present in DataHub but absent from the enforced dbt contract.",
+      "severity": "high",
+      "subject": "field_bar"
+    },
+    {
+      "code": "FIELD_REMOVAL",
+      "detail": "Present in DataHub but absent from the enforced dbt contract.",
+      "severity": "high",
+      "subject": "field_foo"
+    },
+    {
+      "code": "FIELD_ADDITION",
+      "detail": "Declared by dbt but not present in the current DataHub schema.",
+      "severity": "info",
+      "subject": "event_timestamp"
+    },
+    {
+      "code": "FIELD_ADDITION",
+      "detail": "Declared by dbt but not present in the current DataHub schema.",
+      "severity": "info",
+      "subject": "event_type"
+    },
+    {
+      "code": "FIELD_ADDITION",
+      "detail": "Declared by dbt but not present in the current DataHub schema.",
+      "severity": "info",
+      "subject": "id"
+    }
+  ]
+}
