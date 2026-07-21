@@ -40,6 +40,7 @@ jobs:
 
       - name: Run read, confirmed write, and exact re-read
         run: |
+          set -o pipefail
           mkdir -p artifacts/live-plan artifacts/live-write
           plan_hash=""
           for attempt in 1 2 3 4 5 6; do
