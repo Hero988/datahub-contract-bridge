@@ -36,45 +36,6 @@ def _mapping(value: Any, label: str) -> dict[str, Any]:
     raise WritebackError(f"{label} returned a non-object MCP payload")
 
 
-def _single_document(value: Any) -> dict[str, Any]:
-    """Accept direct or MCP-wrapped output while requiring exactly one document."""
-
-    if isinstance(value, Mapping):
-        payload = dict(value)
-        if "info" in payload:
-            return payload
-        for wrapper in ("result", "entities"):
-            if wrapper in payload:
-                return _single_document(payload[wrapper])
-        shape = ", ".join(
-            f"{key}:{type(payload[key]).__name__}" for key in sorted(payload)
-        )
-        raise WritebackError(f"get_entities returned no document info; shape={shape}")
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
-        if len(value) != 1:
-            raise WritebackError(
-                f"get_entities returned {len(value)} entities; expected exactly one document"
-            )
-        return _single_document(value[0])
-    raise WritebackError("get_entities returned an invalid document payload")
-
-
-def _decode_document_result(result: Any) -> dict[str, Any]:
-    """Recover a complete document when MCP structured output is schema-truncated."""
-
-    try:
-        return _single_document(_decode_result(result, "get_entities"))
-    except WritebackError as structured_error:
-        content = getattr(result, "content", None)
-        texts = [item.text for item in content or () if hasattr(item, "text")]
-        for value in texts:
-            try:
-                return _single_document(json.loads(value))
-            except (json.JSONDecodeError, WritebackError):
-                continue
-        raise structured_error
-
-
 def _document_payload(plan: ChangePlan) -> tuple[str, str, str]:
     plan_hash = plan.plan_sha256
     if not re.fullmatch(r"[0-9a-f]{64}", plan_hash):
@@ -128,16 +89,42 @@ class McpPlanWriter:
         if save_result.get("urn") != urn:
             raise WritebackError("save_document returned a different document URN")
 
-        reread = _decode_document_result(
-            await self._call_raw("get_entities", {"urns": urn})
+        reread = _mapping(
+            await self._call(
+                "grep_documents",
+                {
+                    "urns": [urn],
+                    "pattern": "(?s).*",
+                    "context_chars": 7_000,
+                    "max_matches_per_doc": 1,
+                    "start_offset": 0,
+                },
+            ),
+            "grep_documents",
         )
-        info = _mapping(reread.get("info"), "get_entities.info")
-        contents = _mapping(info.get("contents"), "get_entities.info.contents")
-        if reread.get("urn") != urn:
+        documents = reread.get("results")
+        if not isinstance(documents, Sequence) or isinstance(documents, (str, bytes)):
+            raise WritebackError("grep_documents returned an invalid results payload")
+        if len(documents) != 1:
+            raise WritebackError(
+                f"grep_documents returned {len(documents)} documents; expected exactly one"
+            )
+        document = _mapping(documents[0], "grep_documents.results[0]")
+        matches = document.get("matches")
+        if not isinstance(matches, Sequence) or isinstance(matches, (str, bytes)):
+            raise WritebackError("grep_documents returned an invalid matches payload")
+        if len(matches) != 1:
+            raise WritebackError(
+                f"grep_documents returned {len(matches)} excerpts; expected exactly one"
+            )
+        match = _mapping(matches[0], "grep_documents.results[0].matches[0]")
+        if document.get("urn") != urn:
             raise WritebackError("re-read returned a different document URN")
-        if info.get("title") != title:
+        if document.get("title") != title:
             raise WritebackError("re-read document title does not match the written plan")
-        if contents.get("text") != content:
+        if document.get("content_length") != len(content) or match.get("position") != 0:
+            raise WritebackError("re-read did not return the complete document content")
+        if match.get("excerpt") != content:
             raise WritebackError("re-read document content does not match the written plan")
 
         return WritebackReceipt(urn, title, plan.plan_sha256, True)
@@ -181,6 +168,7 @@ async def apply_plan_via_stdio(
         required = {
             "get_entities",
             "get_lineage",
+            "grep_documents",
             "list_schema_fields",
             "save_document",
             "search",

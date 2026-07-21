@@ -73,8 +73,9 @@ datahub-contract-bridge apply-mcp \
 the mutation-enabled MCP session. A stale or mistyped hash fails before any write. A
 matching hash is saved through the official `save_document` tool at the deterministic
 URN `urn:li:document:contract-bridge-<plan SHA-256>`, so retries update the same
-document. The command then calls `get_entities` and requires the exact URN, title and
-complete content to match before writing `writeback-receipt.json` with
+document. The command then calls the official `grep_documents` tool in raw-content
+mode and requires exactly one result with the exact URN, title, zero-based content,
+content length and complete text before writing `writeback-receipt.json` with
 `"verified": true`. Rendered plans over 7,000 characters fail closed so the official
 re-read response can be verified without truncation.
 

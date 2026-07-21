@@ -1,5 +1,4 @@
 import asyncio
-import json
 from collections import defaultdict
 
 import pytest
@@ -67,11 +66,16 @@ def test_writer_uses_deterministic_urn_and_verifies_exact_reread() -> None:
                     "author": "Data Platform",
                 }
             ],
-            "get_entities": [
+            "grep_documents": [
                 {
-                    "urn": urn,
-                    "subType": "Decision",
-                    "info": {"title": title, "contents": {"text": content}},
+                    "results": [
+                        {
+                            "urn": urn,
+                            "title": title,
+                            "matches": [{"excerpt": content, "position": 0}],
+                            "content_length": len(content),
+                        }
+                    ]
                 }
             ],
         }
@@ -84,7 +88,15 @@ def test_writer_uses_deterministic_urn_and_verifies_exact_reread() -> None:
     save = caller.calls["save_document"][0]
     assert save["urn"] == urn
     assert save["related_assets"] == [DATASET_URN]
-    assert caller.calls["get_entities"] == [{"urns": urn}]
+    assert caller.calls["grep_documents"] == [
+        {
+            "urns": [urn],
+            "pattern": "(?s).*",
+            "context_chars": 7_000,
+            "max_matches_per_doc": 1,
+            "start_offset": 0,
+        }
+    ]
 
 
 def test_writer_rejects_success_claim_when_reread_content_differs() -> None:
@@ -94,10 +106,16 @@ def test_writer_rejects_success_claim_when_reread_content_differs() -> None:
     caller = FakeCaller(
         {
             "save_document": [{"success": True, "urn": urn}],
-            "get_entities": [
+            "grep_documents": [
                 {
-                    "urn": urn,
-                    "info": {"title": title, "contents": {"text": "stale content"}},
+                    "results": [
+                        {
+                            "urn": urn,
+                            "title": title,
+                            "matches": [{"excerpt": "stale content", "position": 0}],
+                            "content_length": len(render_markdown(plan)),
+                        }
+                    ]
                 }
             ],
         }
@@ -107,7 +125,7 @@ def test_writer_rejects_success_claim_when_reread_content_differs() -> None:
         asyncio.run(McpPlanWriter(caller).write_and_verify(plan, plan.plan_sha256))
 
 
-def test_writer_accepts_single_mcp_wrapped_document_and_still_verifies_it() -> None:
+def test_writer_rejects_incomplete_reread() -> None:
     plan = _plan()
     urn = f"urn:li:document:contract-bridge-{plan.plan_sha256}"
     title = f"Contract review: {plan.contract.relation_name} [{plan.plan_sha256[:12]}]"
@@ -115,12 +133,14 @@ def test_writer_accepts_single_mcp_wrapped_document_and_still_verifies_it() -> N
     caller = FakeCaller(
         {
             "save_document": [{"success": True, "urn": urn}],
-            "get_entities": [
+            "grep_documents": [
                 {
-                    "result": [
+                    "results": [
                         {
                             "urn": urn,
-                            "info": {"title": title, "contents": {"text": content}},
+                            "title": title,
+                            "matches": [{"excerpt": content[1:], "position": 1}],
+                            "content_length": len(content),
                         }
                     ]
                 }
@@ -128,46 +148,5 @@ def test_writer_accepts_single_mcp_wrapped_document_and_still_verifies_it() -> N
         }
     )
 
-    receipt = asyncio.run(McpPlanWriter(caller).write_and_verify(plan, plan.plan_sha256))
-
-    assert receipt.verified is True
-    assert receipt.document_urn == urn
-
-
-def test_writer_uses_json_text_when_structured_document_is_truncated() -> None:
-    plan = _plan()
-    urn = f"urn:li:document:contract-bridge-{plan.plan_sha256}"
-    title = f"Contract review: {plan.contract.relation_name} [{plan.plan_sha256[:12]}]"
-    content = render_markdown(plan)
-
-    class Text:
-        def __init__(self, text):
-            self.text = text
-
-    class Result:
-        isError = False
-
-        def __init__(self):
-            self.structuredContent = {"urn": urn}
-            self.content = [
-                Text(
-                    json.dumps(
-                        {
-                            "urn": urn,
-                            "info": {"title": title, "contents": {"text": content}},
-                        }
-                    )
-                )
-            ]
-
-    caller = FakeCaller(
-        {
-            "save_document": [{"success": True, "urn": urn}],
-            "get_entities": [Result()],
-        }
-    )
-
-    receipt = asyncio.run(McpPlanWriter(caller).write_and_verify(plan, plan.plan_sha256))
-
-    assert receipt.verified is True
-    assert receipt.document_urn == urn
+    with pytest.raises(WritebackError, match="complete document content"):
+        asyncio.run(McpPlanWriter(caller).write_and_verify(plan, plan.plan_sha256))
