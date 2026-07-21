@@ -1,4 +1,5 @@
 import asyncio
+import json
 from collections import defaultdict
 
 import pytest
@@ -124,6 +125,45 @@ def test_writer_accepts_single_mcp_wrapped_document_and_still_verifies_it() -> N
                     ]
                 }
             ],
+        }
+    )
+
+    receipt = asyncio.run(McpPlanWriter(caller).write_and_verify(plan, plan.plan_sha256))
+
+    assert receipt.verified is True
+    assert receipt.document_urn == urn
+
+
+def test_writer_uses_json_text_when_structured_document_is_truncated() -> None:
+    plan = _plan()
+    urn = f"urn:li:document:contract-bridge-{plan.plan_sha256}"
+    title = f"Contract review: {plan.contract.relation_name} [{plan.plan_sha256[:12]}]"
+    content = render_markdown(plan)
+
+    class Text:
+        def __init__(self, text):
+            self.text = text
+
+    class Result:
+        isError = False
+
+        def __init__(self):
+            self.structuredContent = {"urn": urn}
+            self.content = [
+                Text(
+                    json.dumps(
+                        {
+                            "urn": urn,
+                            "info": {"title": title, "contents": {"text": content}},
+                        }
+                    )
+                )
+            ]
+
+    caller = FakeCaller(
+        {
+            "save_document": [{"success": True, "urn": urn}],
+            "get_entities": [Result()],
         }
     )
 

@@ -59,6 +59,22 @@ def _single_document(value: Any) -> dict[str, Any]:
     raise WritebackError("get_entities returned an invalid document payload")
 
 
+def _decode_document_result(result: Any) -> dict[str, Any]:
+    """Recover a complete document when MCP structured output is schema-truncated."""
+
+    try:
+        return _single_document(_decode_result(result, "get_entities"))
+    except WritebackError as structured_error:
+        content = getattr(result, "content", None)
+        texts = [item.text for item in content or () if hasattr(item, "text")]
+        for value in texts:
+            try:
+                return _single_document(json.loads(value))
+            except (json.JSONDecodeError, WritebackError):
+                continue
+        raise structured_error
+
+
 def _document_payload(plan: ChangePlan) -> tuple[str, str, str]:
     plan_hash = plan.plan_sha256
     if not re.fullmatch(r"[0-9a-f]{64}", plan_hash):
@@ -75,11 +91,14 @@ def _document_payload(plan: ChangePlan) -> tuple[str, str, str]:
 class McpPlanWriter:
     caller: ToolCaller
 
-    async def _call(self, name: str, arguments: dict[str, Any]) -> Any:
+    async def _call_raw(self, name: str, arguments: dict[str, Any]) -> Any:
         result = await self.caller.call_tool(name, arguments)
         if getattr(result, "isError", False) or getattr(result, "is_error", False):
             raise WritebackError(f"DataHub MCP tool {name} reported an error")
-        return _decode_result(result, name)
+        return result
+
+    async def _call(self, name: str, arguments: dict[str, Any]) -> Any:
+        return _decode_result(await self._call_raw(name, arguments), name)
 
     async def write_and_verify(self, plan: ChangePlan, confirmation: str) -> WritebackReceipt:
         if not secrets.compare_digest(plan.plan_sha256, confirmation.strip().lower()):
@@ -109,7 +128,9 @@ class McpPlanWriter:
         if save_result.get("urn") != urn:
             raise WritebackError("save_document returned a different document URN")
 
-        reread = _single_document(await self._call("get_entities", {"urns": urn}))
+        reread = _decode_document_result(
+            await self._call_raw("get_entities", {"urns": urn})
+        )
         info = _mapping(reread.get("info"), "get_entities.info")
         contents = _mapping(info.get("contents"), "get_entities.info.contents")
         if reread.get("urn") != urn:
