@@ -3,6 +3,16 @@
 Target length: 2:35. Public YouTube or Vimeo upload; no music and no third-party footage.
 Record only the public repository, terminal, generated artifacts, and public workflow.
 
+The rendered 1280×720 MP4 is
+`submission/video/datahub-contract-bridge-demo.mp4`. It uses synthetic narration and
+hard-coded captions; the six scene sources, narration text, live public-workflow
+screenshot and deterministic render script are in `submission/video/`. The fixture
+command and all checks must pass immediately before a final render.
+
+Final render record (21 July 2026): 2:35.03, 3.1 MB, SHA-256
+`717bfac00581cf500d0018ba0a4e17540839d81e5a1e3891a6abb224b9e3d178`.
+The complete file was decoded after rendering; all six frames were visually checked.
+
 ## Script and shots
 
 ### 0:00–0:18 — Problem

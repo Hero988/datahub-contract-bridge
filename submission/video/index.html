@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DataHub Contract Bridge — demo</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: #0d1c2e;
+      --panel-2: #11263d;
+      --ink: #f4f8fc;
+      --muted: #a9bed2;
+      --cyan: #51d6e8;
+      --green: #63e6a5;
+      --amber: #ffd166;
+      --red: #ff7d8b;
+      --line: #26445f;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 1280px; height: 720px; margin: 0; overflow: hidden; }
+    body {
+      background:
+        radial-gradient(circle at 82% 12%, rgba(81, 214, 232, .12), transparent 25%),
+        linear-gradient(145deg, #07111f, #091727 62%, #06101b);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .slide { display: none; height: 720px; padding: 42px 58px 88px; position: relative; }
+    body[data-slide="1"] #slide-1,
+    body[data-slide="2"] #slide-2,
+    body[data-slide="3"] #slide-3,
+    body[data-slide="4"] #slide-4,
+    body[data-slide="5"] #slide-5,
+    body[data-slide="6"] #slide-6 { display: block; }
+
+    .eyebrow {
+      color: var(--cyan);
+      font-size: 18px;
+      font-weight: 750;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1 { font-size: 54px; letter-spacing: -.035em; line-height: 1.03; margin: 12px 0 12px; }
+    h2 { font-size: 38px; letter-spacing: -.025em; line-height: 1.08; margin: 9px 0 20px; }
+    h3 { margin: 0 0 10px; font-size: 20px; }
+    p { color: var(--muted); font-size: 21px; line-height: 1.45; margin: 0; }
+    code, pre, .mono { font-family: "DejaVu Sans Mono", "Liberation Mono", monospace; }
+    code { color: #d9f8ff; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 25px; }
+    .panel {
+      background: linear-gradient(145deg, rgba(17, 38, 61, .96), rgba(9, 25, 42, .96));
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      box-shadow: 0 22px 50px rgba(0, 0, 0, .22);
+      padding: 22px 24px;
+    }
+    .panel-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--cyan); }
+    .dot.green { background: var(--green); }
+    .tag {
+      border: 1px solid #34738a;
+      border-radius: 999px;
+      color: #c7f7ff;
+      display: inline-block;
+      font: 700 14px/1 ui-monospace, monospace;
+      padding: 8px 11px;
+    }
+    .arrow { color: var(--cyan); font-size: 52px; font-weight: 700; align-self: center; }
+
+    .code {
+      background: #050b12;
+      border: 1px solid #1a354d;
+      border-radius: 12px;
+      color: #dcecff;
+      font-size: 17px;
+      line-height: 1.52;
+      margin: 0;
+      overflow: hidden;
+      padding: 18px 20px;
+      white-space: pre-wrap;
+    }
+    .shell { color: var(--green); }
+    .hash { color: var(--amber); word-break: break-all; }
+    .quiet { color: #7894ae; }
+    .risk-table { display: grid; gap: 11px; margin-top: 18px; }
+    .risk {
+      align-items: center;
+      background: rgba(8, 21, 36, .9);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      display: grid;
+      grid-template-columns: 105px 225px 1fr;
+      min-height: 62px;
+      padding: 10px 16px;
+    }
+    .severity { border-radius: 999px; font-size: 13px; font-weight: 800; padding: 7px 10px; text-align: center; width: 72px; }
+    .high { background: rgba(255, 125, 139, .16); color: var(--red); }
+    .medium { background: rgba(255, 209, 102, .15); color: var(--amber); }
+    .info { background: rgba(81, 214, 232, .14); color: var(--cyan); }
+    .risk strong { color: #eff7ff; font: 700 17px/1.2 ui-monospace, monospace; }
+    .risk span:last-child { color: var(--muted); font-size: 17px; }
+
+    .flow { align-items: stretch; display: grid; grid-template-columns: 1fr 55px 1fr 55px 1fr; gap: 8px; margin: 24px 0; }
+    .step { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 21px; }
+    .step-num { color: var(--cyan); font: 800 15px/1 ui-monospace, monospace; margin-bottom: 10px; }
+    .step p { font-size: 17px; }
+
+    .proof { display: grid; grid-template-columns: 1.45fr .85fr; gap: 21px; margin-top: 18px; }
+    .proof img { border-radius: 14px; width: 100%; border: 1px solid var(--line); }
+    .receipt { background: #050b12; border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+    .verified { align-items: center; background: rgba(99, 230, 165, .11); border: 1px solid rgba(99, 230, 165, .45); border-radius: 11px; color: var(--green); display: flex; font-size: 25px; font-weight: 800; gap: 10px; margin-top: 18px; padding: 14px; }
+
+    .safety { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 26px 0 25px; }
+    .safety .panel { padding: 18px; }
+    .safety strong { display: block; font-size: 17px; margin-bottom: 7px; }
+    .safety span { color: var(--muted); font-size: 15px; line-height: 1.35; }
+    .command { background: #050b12; border: 1px solid var(--line); border-radius: 13px; color: var(--green); font: 700 24px/1.4 ui-monospace, monospace; padding: 18px 22px; text-align: center; }
+
+    .caption {
+      align-items: center;
+      background: rgba(2, 8, 14, .94);
+      border-top: 1px solid #27435b;
+      bottom: 0;
+      color: #f6f9fc;
+      display: flex;
+      font-size: 19px;
+      height: 68px;
+      justify-content: center;
+      left: 0;
+      line-height: 1.34;
+      padding: 8px 72px 10px;
+      position: absolute;
+      right: 0;
+      text-align: center;
+    }
+    .brand { color: #7894ae; font: 700 13px/1 ui-monospace, monospace; position: absolute; right: 22px; top: 19px; }
+    .progress { background: var(--cyan); height: 3px; left: 0; position: absolute; top: 0; }
+    #slide-1 .progress { width: 16.7%; }
+    #slide-2 .progress { width: 33.4%; }
+    #slide-3 .progress { width: 50.1%; }
+    #slide-4 .progress { width: 66.8%; }
+    #slide-5 .progress { width: 83.5%; }
+    #slide-6 .progress { width: 100%; }
+  </style>
+</head>
+<body data-slide="1">
+  <section class="slide" id="slide-1">
+    <div class="progress"></div><div class="brand">DATAHUB CONTRACT BRIDGE</div>
+    <div class="eyebrow">Data contract agent</div>
+    <h1>Join dbt intent to<br>live DataHub context</h1>
+    <p>One reviewable plan before a schema change leaves a durable catalog record.</p>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header"><span class="dot"></span><h3>dbt manifest</h3></div>
+        <pre class="code">contract:
+  enforced: <span class="shell">true</span>
+columns:
+  - customer_id: bigint
+  - net_total: numeric
+tests:
+  - unique <span class="quiet"># tag: contract</span></pre>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="dot green"></span><h3>DataHub catalog</h3></div>
+        <pre class="code">schema: customer_id <span class="hash">VARCHAR</span>
+owner:  data-platform
+lineage:
+  downstream: Finance revenue
+environment: PROD</pre>
+      </div>
+    </div>
+    <div class="caption">dbt knows the declared contract. DataHub knows the live schema, owners, and downstream graph.</div>
+  </section>
+
+  <section class="slide" id="slide-2">
+    <div class="progress"></div><div class="brand">REAL FIXTURE RUN • 21 JULY 2026</div>
+    <div class="eyebrow">Read and plan</div>
+    <h2>The same deterministic planner powers fixture and MCP modes</h2>
+    <pre class="code"><span class="shell">$</span> .venv/bin/datahub-contract-bridge plan \
+    --manifest tests/fixtures/manifest.json \
+    --catalog-fixture tests/fixtures/catalog.json \
+    --output artifacts/demo
+
+<span class="hash">f8d746419e1a685e8d1e44023fb9a5377e3de19c5146ac08e9ef35c85376cfb3</span>
+
+<span class="shell">$</span> .venv/bin/python -m pytest -q
+<span class="shell">............                                             [100%]</span>
+<span class="shell">$</span> .venv/bin/ruff check .
+<span class="shell">All checks passed!</span></pre>
+    <p style="margin-top: 18px"><span class="tag">exact asset</span> &nbsp; <span class="tag">paginated schema</span> &nbsp; <span class="tag">owners</span> &nbsp; <span class="tag">one-hop lineage</span></p>
+    <div class="caption">Live mode resolves exactly one dataset through the official DataHub MCP server and fails closed on incomplete context.</div>
+  </section>
+
+  <section class="slide" id="slide-3">
+    <div class="progress"></div><div class="brand">ARTIFACTS/DEMO/PLAN.MD</div>
+    <div class="eyebrow">Useful output</div>
+    <h2>Risk, blast radius, ownership—and an exact confirmation hash</h2>
+    <div class="risk-table">
+      <div class="risk"><span class="severity high">HIGH</span><strong>FIELD_REMOVAL</strong><span><code>status</code> exists in DataHub but not in the enforced dbt contract.</span></div>
+      <div class="risk"><span class="severity high">HIGH</span><strong>TYPE_CHANGE</strong><span><code>customer_id</code>: dbt declares bigint; DataHub reports varchar.</span></div>
+      <div class="risk"><span class="severity info">INFO</span><strong>FIELD_ADDITION</strong><span><code>net_total</code> is declared by dbt but absent from DataHub.</span></div>
+      <div class="risk"><span class="severity medium">MEDIUM</span><strong>DOWNSTREAM_IMPACT</strong><span>One downstream asset: <code>Finance revenue</code>.</span></div>
+    </div>
+    <p style="margin-top: 18px"><b style="color: var(--ink)">Owner:</b> data-platform &nbsp;•&nbsp; <b style="color: var(--ink)">Plan SHA-256:</b> <span class="hash mono">f8d746419e1a…76cfb3</span></p>
+    <div class="caption">JSON supports automation; Markdown gives reviewers the same facts. SHA-256 binds the reviewed plan to any write.</div>
+  </section>
+
+  <section class="slide" id="slide-4">
+    <div class="progress"></div><div class="brand">GUARDED APPLY-MCP</div>
+    <div class="eyebrow">Human-confirmed action</div>
+    <h2>Read-only by default. Exact-plan write-back by exception.</h2>
+    <div class="flow">
+      <div class="step"><div class="step-num">01 • RE-READ</div><h3>Fresh live context</h3><p>Schema, lineage, and owners are read again inside the write session.</p></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="step-num">02 • COMPARE</div><h3>Hash must match</h3><p>A stale or mistyped SHA-256 fails before any mutation.</p></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="step-num">03 • VERIFY</div><h3>Independent re-read</h3><p>A fresh read-only MCP process checks the full saved document.</p></div>
+    </div>
+    <pre class="code"><span class="shell">$</span> datahub-contract-bridge apply-mcp \
+    --manifest tests/fixtures/manifest.json \
+    --output artifacts/live-write \
+    --confirm-plan-sha256 <span class="hash">'&lt;exact reviewed SHA-256&gt;'</span></pre>
+    <div class="caption">The document URN derives from the hash, so retries update the same record instead of creating duplicates.</div>
+  </section>
+
+  <section class="slide" id="slide-5">
+    <div class="progress"></div><div class="brand">PUBLIC RUN 29842906648</div>
+    <div class="eyebrow">Live proof</div>
+    <h2>Official DataHub OSS + MCP read, write, and fresh-session verification</h2>
+    <div class="proof">
+      <img src="assets/live-workflow.png" alt="Public GitHub Actions run 29842906648 succeeded">
+      <div class="receipt">
+        <h3>writeback-receipt.json</h3>
+        <pre class="code" style="font-size: 14px; padding: 13px">{
+  "title":
+    "Contract review:
+     SampleHiveDataset
+     [9c100558ffa9]",
+  "plan_sha256":
+    <span class="hash">"9c100558…9d161"</span>,
+  "verified": <span class="shell">true</span>
+}</pre>
+        <div class="verified">✓ verified: true</div>
+      </div>
+    </div>
+    <div class="caption">The public runner used DataHub's synthetic sample only; the preserved pre-write and write-session plans are byte-identical.</div>
+  </section>
+
+  <section class="slide" id="slide-6">
+    <div class="progress"></div><div class="brand">APACHE-2.0 • SYNTHETIC DATA</div>
+    <div class="eyebrow">Auditable by design</div>
+    <h2>Compose the controls DataHub teams already rely on</h2>
+    <div class="safety">
+      <div class="panel"><strong>Exact resolution</strong><span>Ambiguous assets stop the plan.</span></div>
+      <div class="panel"><strong>Bounded reads</strong><span>Schema and lineage limits fail closed.</span></div>
+      <div class="panel"><strong>Exact confirmation</strong><span>Reviewed hash gates mutation.</span></div>
+      <div class="panel"><strong>Verified receipt</strong><span>Independent full-content re-read.</span></div>
+    </div>
+    <div class="command">python -m pytest &nbsp;&nbsp;•&nbsp;&nbsp; ruff check .</div>
+    <p style="margin-top: 20px; text-align: center">github.com/Hero988/datahub-contract-bridge</p>
+    <div class="caption">Contract Bridge composes dbt intent, catalog context, human confirmation, and durable verified write-back.</div>
+  </section>
+
+  <script>
+    const requested = new URLSearchParams(location.search).get('slide');
+    document.body.dataset.slide = /^[1-6]$/.test(requested || '') ? requested : '1';
+  </script>
+</body>
+</html>

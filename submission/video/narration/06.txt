@@ -1,0 +1,1 @@
+Contract Bridge does not replace DataHub contracts or impact analysis. It composes dbt intent, catalog context, human confirmation, and durable verified write-back into one auditable workflow.

@@ -1,0 +1,1 @@
+Read-only is the default. Applying a plan starts a mutation-enabled MCP session, re-reads live context, recomputes the plan, and refuses a stale or mistyped hash before writing. The document U R N is derived from the hash, so retrying updates the same record.

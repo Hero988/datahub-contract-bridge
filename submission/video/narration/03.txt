@@ -1,0 +1,1 @@
+The output separates high-risk removal and type drift from additions, then names downstream impact and ownership. JSON supports automation; Markdown gives a reviewer the same facts. The SHA two fifty six binds this exact plan to any later write.

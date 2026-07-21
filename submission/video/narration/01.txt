@@ -1,0 +1,1 @@
+dbt knows the contract a model declares. DataHub knows the live schema, owners, and downstream graph. Contract Bridge joins those views before a change is allowed to leave a durable record.

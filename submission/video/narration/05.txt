@@ -1,0 +1,1 @@
+This public run started DataHub Open Source version one point five point zero point six with DataHub's synthetic sample, completed the official MCP read and write, then closed the writer. A fresh read-only MCP process verified the exact title, length, full content, and an overlapping read. Only then did it emit verified true.

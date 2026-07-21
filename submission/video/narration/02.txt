@@ -1,0 +1,1 @@
+The agent selects one enforced dbt contract and only explicitly tagged contract tests. Through the official DataHub MCP server, live mode resolves exactly one dataset, paginates its schema, reads owners, and bounds lineage to one hop. The same pure planner makes the fixture demo reproducible.
