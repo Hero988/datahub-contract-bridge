@@ -69,7 +69,17 @@ def test_writer_can_split_mutation_from_fresh_session_verification() -> None:
                             "content_length": len(content),
                         }
                     ]
-                }
+                },
+                {
+                    "results": [
+                        {
+                            "urn": urn,
+                            "title": title,
+                            "matches": [{"excerpt": content[1:], "position": 1}],
+                            "content_length": len(content),
+                        }
+                    ]
+                },
             ]
         }
     )
@@ -107,7 +117,17 @@ def test_writer_uses_deterministic_urn_and_verifies_exact_reread() -> None:
                             "content_length": len(content),
                         }
                     ]
-                }
+                },
+                {
+                    "results": [
+                        {
+                            "urn": urn,
+                            "title": title,
+                            "matches": [{"excerpt": content[1:], "position": 1}],
+                            "content_length": len(content),
+                        }
+                    ]
+                },
             ],
         }
     )
@@ -126,7 +146,14 @@ def test_writer_uses_deterministic_urn_and_verifies_exact_reread() -> None:
             "context_chars": 7_000,
             "max_matches_per_doc": 1,
             "start_offset": 0,
-        }
+        },
+        {
+            "urns": [urn],
+            "pattern": "(?s).*",
+            "context_chars": 7_000,
+            "max_matches_per_doc": 1,
+            "start_offset": 1,
+        },
     ]
 
 

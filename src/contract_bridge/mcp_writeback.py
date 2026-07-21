@@ -131,10 +131,55 @@ class McpPlanWriter:
             raise WritebackError("re-read returned a different document URN")
         if document.get("title") != title:
             raise WritebackError("re-read document title does not match the written plan")
-        if document.get("content_length") != len(content) or match.get("position") != 0:
+        if match.get("position") != 0:
             raise WritebackError("re-read did not return the complete document content")
         if match.get("excerpt") != content:
             raise WritebackError("re-read document content does not match the written plan")
+
+        # The official tool only includes content_length when start_offset is non-zero.
+        # A second overlapping read therefore proves the server-reported original length
+        # while retaining the first call's byte-identical verification from character 0.
+        length_reread = _mapping(
+            await self._call(
+                "grep_documents",
+                {
+                    "urns": [urn],
+                    "pattern": "(?s).*",
+                    "context_chars": 7_000,
+                    "max_matches_per_doc": 1,
+                    "start_offset": 1,
+                },
+            ),
+            "grep_documents length check",
+        )
+        length_documents = length_reread.get("results")
+        if (
+            not isinstance(length_documents, Sequence)
+            or isinstance(length_documents, (str, bytes))
+            or len(length_documents) != 1
+        ):
+            raise WritebackError("grep_documents length check returned an invalid result")
+        length_document = _mapping(
+            length_documents[0], "grep_documents length check results[0]"
+        )
+        length_matches = length_document.get("matches")
+        if (
+            not isinstance(length_matches, Sequence)
+            or isinstance(length_matches, (str, bytes))
+            or len(length_matches) != 1
+        ):
+            raise WritebackError("grep_documents length check returned an invalid excerpt")
+        length_match = _mapping(
+            length_matches[0], "grep_documents length check results[0].matches[0]"
+        )
+        if (
+            length_document.get("urn") != urn
+            or length_document.get("title") != title
+            or length_document.get("content_length") != len(content)
+            or length_match.get("position") != 1
+            or length_match.get("excerpt") != content[1:]
+        ):
+            raise WritebackError("re-read document length check does not match the written plan")
 
         return WritebackReceipt(urn, title, plan.plan_sha256, True)
 
