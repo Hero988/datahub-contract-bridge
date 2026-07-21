@@ -10,8 +10,22 @@ lineage and owners, then emits JSON plus Markdown with a stable SHA-256 confirma
 token. The same planner can run against deterministic catalog fixtures.
 
 The MCP adapter and guarded write-back are covered by deterministic transport-contract
-tests but have not yet run against a live DataHub instance. Offline fixtures are not
-presented as a live integration.
+tests and a live disposable DataHub OSS integration. Offline fixtures remain clearly
+separate from that live evidence.
+
+## Verified live integration
+
+[GitHub Actions run 29842906648](https://github.com/Hero988/datahub-contract-bridge/actions/runs/29842906648)
+started DataHub OSS 1.5.0.6 on a disposable public runner, ingested only DataHub's
+official synthetic `SampleHiveDataset`, resolved its live schema/owners through the
+official MCP server, and produced plan SHA-256
+`9c100558ffa9a172ffcdd63c6ebb2172b94a3a56c5d84afb8f0e5ce03df9d161`.
+The guarded command then saved deterministic document URN
+`urn:li:document:contract-bridge-9c100558ffa9a172ffcdd63c6ebb2172b94a3a56c5d84afb8f0e5ce03df9d161`
+and verified its exact title, zero-based full content, server-reported length and
+overlapping content through the official read-only `grep_documents` tool. The preserved
+receipt has `"verified": true`, and the pre-write and write-session plan files are
+byte-identical. No customer, private or production data was used.
 
 ## Why this exists
 
@@ -73,9 +87,11 @@ datahub-contract-bridge apply-mcp \
 the mutation-enabled MCP session. A stale or mistyped hash fails before any write. A
 matching hash is saved through the official `save_document` tool at the deterministic
 URN `urn:li:document:contract-bridge-<plan SHA-256>`, so retries update the same
-document. The command then calls the official `grep_documents` tool in raw-content
-mode and requires exactly one result with the exact URN, title, zero-based content,
-content length and complete text before writing `writeback-receipt.json` with
+document. The mutation process then closes and the command starts a fresh read-only MCP
+process because DataHub decides whether to expose document tools when a process starts.
+It calls the official `grep_documents` tool in raw-content mode and requires exactly
+one result with the exact URN, title, zero-based complete content, server-reported
+content length and an overlapping second read before writing `writeback-receipt.json` with
 `"verified": true`. Rendered plans over 7,000 characters fail closed so the official
 re-read response can be verified without truncation.
 
