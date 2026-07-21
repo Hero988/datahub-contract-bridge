@@ -104,3 +104,30 @@ def test_writer_rejects_success_claim_when_reread_content_differs() -> None:
 
     with pytest.raises(WritebackError, match="content does not match"):
         asyncio.run(McpPlanWriter(caller).write_and_verify(plan, plan.plan_sha256))
+
+
+def test_writer_accepts_single_mcp_wrapped_document_and_still_verifies_it() -> None:
+    plan = _plan()
+    urn = f"urn:li:document:contract-bridge-{plan.plan_sha256}"
+    title = f"Contract review: {plan.contract.relation_name} [{plan.plan_sha256[:12]}]"
+    content = render_markdown(plan)
+    caller = FakeCaller(
+        {
+            "save_document": [{"success": True, "urn": urn}],
+            "get_entities": [
+                {
+                    "result": [
+                        {
+                            "urn": urn,
+                            "info": {"title": title, "contents": {"text": content}},
+                        }
+                    ]
+                }
+            ],
+        }
+    )
+
+    receipt = asyncio.run(McpPlanWriter(caller).write_and_verify(plan, plan.plan_sha256))
+
+    assert receipt.verified is True
+    assert receipt.document_urn == urn

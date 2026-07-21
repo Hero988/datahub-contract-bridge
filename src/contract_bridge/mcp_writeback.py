@@ -36,6 +36,26 @@ def _mapping(value: Any, label: str) -> dict[str, Any]:
     raise WritebackError(f"{label} returned a non-object MCP payload")
 
 
+def _single_document(value: Any) -> dict[str, Any]:
+    """Accept direct or MCP-wrapped output while requiring exactly one document."""
+
+    if isinstance(value, Mapping):
+        payload = dict(value)
+        if "info" in payload:
+            return payload
+        for wrapper in ("result", "entities"):
+            if wrapper in payload:
+                return _single_document(payload[wrapper])
+        raise WritebackError("get_entities returned no document info")
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        if len(value) != 1:
+            raise WritebackError(
+                f"get_entities returned {len(value)} entities; expected exactly one document"
+            )
+        return _single_document(value[0])
+    raise WritebackError("get_entities returned an invalid document payload")
+
+
 def _document_payload(plan: ChangePlan) -> tuple[str, str, str]:
     plan_hash = plan.plan_sha256
     if not re.fullmatch(r"[0-9a-f]{64}", plan_hash):
@@ -86,7 +106,7 @@ class McpPlanWriter:
         if save_result.get("urn") != urn:
             raise WritebackError("save_document returned a different document URN")
 
-        reread = _mapping(await self._call("get_entities", {"urns": urn}), "get_entities")
+        reread = _single_document(await self._call("get_entities", {"urns": urn}))
         info = _mapping(reread.get("info"), "get_entities.info")
         contents = _mapping(info.get("contents"), "get_entities.info.contents")
         if reread.get("urn") != urn:
