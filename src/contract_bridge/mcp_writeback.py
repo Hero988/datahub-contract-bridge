@@ -46,7 +46,10 @@ def _single_document(value: Any) -> dict[str, Any]:
         for wrapper in ("result", "entities"):
             if wrapper in payload:
                 return _single_document(payload[wrapper])
-        raise WritebackError("get_entities returned no document info")
+        shape = ", ".join(
+            f"{key}:{type(payload[key]).__name__}" for key in sorted(payload)
+        )
+        raise WritebackError(f"get_entities returned no document info; shape={shape}")
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
         if len(value) != 1:
             raise WritebackError(
