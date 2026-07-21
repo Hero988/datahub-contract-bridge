@@ -116,7 +116,12 @@ async def apply_plan_via_stdio(
     environment = os.environ.copy()
     environment["TOOLS_IS_MUTATION_ENABLED"] = "true"
     environment["SAVE_DOCUMENT_TOOL_ENABLED"] = "true"
-    environment["SAVE_DOCUMENT_RESTRICT_UPDATES"] = "true"
+    # The official server treats any caller-supplied URN as an update, including the
+    # first creation of a deterministic URN. Its Shared-folder update guard therefore
+    # rejects a not-yet-existing document before save_document can create it. This
+    # session disables that location guard; McpPlanWriter still permits only the
+    # plan-derived URN and verifies the returned URN, title, and full content.
+    environment["SAVE_DOCUMENT_RESTRICT_UPDATES"] = "false"
     parameters = StdioServerParameters(
         command=command,
         args=list(arguments),

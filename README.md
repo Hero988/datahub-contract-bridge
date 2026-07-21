@@ -78,6 +78,12 @@ complete content to match before writing `writeback-receipt.json` with
 `"verified": true`. Rendered plans over 7,000 characters fail closed so the official
 re-read response can be verified without truncation.
 
+DataHub's MCP server classifies a caller-supplied document URN as an update even when
+the document does not exist yet. Contract Bridge therefore disables the server's
+Shared-folder-only update-location check inside this one write session. The client
+still permits only the SHA-derived URN above, checks that `save_document` returned that
+exact URN, and requires an exact title and full-content re-read before success.
+
 ## Test
 
 ```bash
