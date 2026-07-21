@@ -1,0 +1,39 @@
+{
+  "metadata": {"dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v12.json"},
+  "nodes": {
+    "model.bridge.orders": {
+      "unique_id": "model.bridge.orders",
+      "resource_type": "model",
+      "name": "orders",
+      "database": "warehouse",
+      "schema": "analytics",
+      "alias": "orders",
+      "relation_name": "warehouse.analytics.orders",
+      "config": {"enabled": true, "contract": {"enforced": true}},
+      "columns": {
+        "order_id": {"name": "order_id", "data_type": "bigint", "constraints": [{"type": "not_null"}]},
+        "customer_id": {"name": "customer_id", "data_type": "bigint"},
+        "net_total": {"name": "net_total", "data_type": "numeric"}
+      }
+    },
+    "test.bridge.unique_orders_order_id": {
+      "unique_id": "test.bridge.unique_orders_order_id",
+      "resource_type": "test",
+      "name": "unique_orders_order_id",
+      "column_name": "order_id",
+      "tags": ["contract"],
+      "test_metadata": {"name": "unique", "kwargs": {"column_name": "order_id"}},
+      "depends_on": {"nodes": ["model.bridge.orders"]}
+    },
+    "test.bridge.accepted_values_orders_status": {
+      "unique_id": "test.bridge.accepted_values_orders_status",
+      "resource_type": "test",
+      "name": "accepted_values_orders_status",
+      "column_name": "status",
+      "tags": ["advisory"],
+      "test_metadata": {"name": "accepted_values", "kwargs": {"column_name": "status"}},
+      "depends_on": {"nodes": ["model.bridge.orders"]}
+    }
+  }
+}
+

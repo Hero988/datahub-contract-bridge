@@ -1,0 +1,19 @@
+{
+  "warehouse.analytics.orders": {
+    "dataset_urn": "urn:li:dataset:(urn:li:dataPlatform:snowflake,warehouse.analytics.orders,PROD)",
+    "fields": [
+      {"name": "order_id", "data_type": "BIGINT"},
+      {"name": "customer_id", "data_type": "VARCHAR"},
+      {"name": "status", "data_type": "VARCHAR"}
+    ],
+    "downstream": [
+      {
+        "urn": "urn:li:dashboard:(looker,finance-revenue)",
+        "name": "Finance revenue",
+        "entity_type": "DASHBOARD"
+      }
+    ],
+    "owners": ["urn:li:corpGroup:data-platform"]
+  }
+}
+
